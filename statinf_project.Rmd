@@ -1,0 +1,189 @@
+---
+title: "Statistical Inference Course Project"
+author: 'AD'
+output:
+  html_document:
+    toc: yes
+---
+
+This report contains two main section: (1) analysis of the exponential distribution, and (2) basic inferential analysis using the ToothGrowth data from the R package *datasets*. Please note that the appendix material (R code and graphs) have been included within the main text (for readability and presentation).  
+
+Load libraries
+
+```{r, echo=TRUE}
+library(magrittr)   #knitr dependency
+```
+
+# Part One
+In this section we will investigate the exponential distribution. The exponential distribution can be simulated in R with **rexp(n, lambda)** where *lambda* is the rate parameter. The mean of a (e.g., $n=1$) exponential distribution is $\frac{1}{lambda}$ with the standard deviation is $\frac{^1/_{lambda}}{\sqrt{n}}$.   
+
+We will use $lambda = 0.2$, and explore the distribution of means derived from $n=40$ sampled exponentials. Thus:
+
+* **theoretical mean ($\mu$):** 5
+* **theoretical variance ($\sigma^2$):** 0.625 
+
+### The knowns variables
+```{r, echo=TRUE}
+#lets set the known variables:
+n=40
+lambda = 0.2
+
+#the population or true statistics
+theoretical.mean <- 1/lambda 
+theoretical.stdv <- 1/lambda/sqrt(n)
+theoretical.var = theoretical.stdv^2
+
+#reproducibility
+set.seed(8364)
+```
+
+### Simulations
+*Below is a function to simulate the exponential distribution.* 
+```{r, echo=TRUE}
+#a function to simulate rexp with n simulation and nx exponentials
+sim.rexp.means <- function(n, nx = 40) {
+    rexp.means <- numeric()
+    for (i in 1:n) { 
+        rexp.means <- c(rexp.means, mean(rexp(nx, lambda)))
+    }
+rexp.means
+}
+```
+
+Note, given the Law of Large Numbers (LLN), we should be able to estimate the population or true mean and variance (mentioned previously) from an *independent and identically distributed* (*idd*) sample. Lets simulate 1000 sample means, each a mean derived from $n=40$ sampled exponential distribution using the R function $rexp(n=40, rate=0.2)$: 
+```{r, echo=TRUE}
+#m <- replicate(1000, rexp(40, 0.2))
+m <- sim.rexp.means(n = 1000) #simulate
+sample.mean <- mean(m)
+sample.sd <- sd(m)
+sample.var <- sample.sd^2
+```
+We can see that the sample mean **`r signif(sample.mean, 4)`** is a good estimate of the **theoretical mean: 5**. Note, the sample mean (green vertical line) and theoretical mean (red) are shown on the plot below. Likewise, the sample variance **`r signif(sample.var, 4)`** is a good estimation of the **theoretical variance 0.625**.
+
+Moreover, when analysing the shape of the simulated distribution we can see that it is bell shaped, similar to the normal distribution.
+```{r}
+hist(m, main = "Distribution of means 1000 x rexp(40, 0.2)", xlab = "Sample means")
+abline(v=theoretical.mean,col="red", lty=1, lwd=2) # theoretical mean
+abline(v=theoretical.mean,col="green", lty=2, lwd=2 ) # sample mean
+```
+
+We can also compare the theoretical vs sample quantile as an indication if the distribution is approximately normal. Further, as shown in the following figure the sample follows the theoretical quantile with seemingly high correlation which in turns indicate that this distribution is approximatly normal.
+```{r, echo=TRUE}
+qqnorm(m)
+qqline(m)
+```
+
+```{r, echo=FALSE}
+#Lets look at the density of the simulated distribution.
+#plot(density(m), main = "Distribution of means 1000 x rexp(40, 0.2)")
+#x = seq(2,9,.1)
+#lines(x=x,y=dnorm(x,mean=theoretical.mean ,sd=theoretical.stdv), xlab = "Sample means", col="red", type="l", lty=2)
+```
+
+### Central Limit Theorem
+Roughly, the central limit theorem (CLT) states that the distribution of the average (or sum) of a large number of idd variables will be approximately normal, regardless of the underlying distribution. (http://www.math.uah.edu/stat/sample/CLT.html).  
+Specifically, CLT states that sampling (idd) means from any distribution $\frac{\bar{X}_n - \mu}{\sigma/sqrt(n)}$ where $\bar{X}_n$ is a sample mean, the sample becomes that of the standard normal $N(\mu, \frac{\sigma}{sqrt(n)})$ as the sample size increases.
+
+Lets simulate and apply CLT.
+```{r, echo=TRUE}
+#a function to simulate CLT using    rexp with n simulation and nx exponentials
+sim.clt.rexp.means <- function(n, nx = 40) {
+    rexp.means <- numeric()
+    for (i in 1:n) { 
+        rexp.means <- c(rexp.means, (mean(rexp(nx, lambda)) - theoretical.mean) / theoretical.stdv/sqrt(nx))
+    }
+rexp.means
+}
+
+#the standard deviation of averages of 40 standard normals: 1/sqrt(40).
+m1<- sim.clt.rexp.means(1000)
+plot(density(m1), main = "Distribution of means 1000 x rexp(40, 0.2)", xlab = "Sample means")
+x = seq(-1,1,.001)
+lines(x=x,y=dnorm(x,mean=0 ,sd=1/sqrt(n)), xlab = "Sample means", col="red", type="l", lty=2)
+```
+
+Note, the red bell-curve is the plotted true normal $N(0, \frac{1}{sqrt{40}})$ and the black curve is the simulated data with $\bar{X}_n=`r signif(mean(m1), 1)`$ and  $\sigma=`r signif(sd(m1), 1)`$.
+
+# Part two
+
+In this part we will analyze the *ToothGrowth* dataset in the R *datasets* package. 
+
+## ToothGrowth data
+```{r}
+library(datasets) #load ToothGrowth data
+
+#summary statistics of different variables
+summary(ToothGrowth)
+```
+
+### Description
+Recreated from (R) TootGrowth dataset documentation:
+The response is the length (*len*) of odontoblasts (teeth) in each of 10 guinea pigs at each of three *dose* levels (0.5, 1, and 2 mg) of Vitamin C with each of two delivery methods (*supp*) (orange juice (*OJ*) or ascorbic acid (*VC*)).
+
+### Format
+A data frame with 60 observations on 3 variables.
+
+[,1]	 len	 numeric	 Tooth length  
+[,2]	 supp	 factor	 Supplement type (VC or OJ)  
+[,3]	 dose	 numeric	 Dose in milligrams  
+
+Lets visualise the data:
+```{r, echo=TRUE}
+#lets visualise the data
+boxplot(len~supp*dose, data = ToothGrowth, col=(c("red1","green1")), main="ToothGrowth data", xlab="Supplement.Dose")
+```
+  
+***
+
+*Given the above box plot we could formulate and test at least three main hypotheses; which we can test using two-sided independent sample Student's t-tests with the customary 95 confidence interval.* 
+
+***
+
+1.  
+$H_0: OJ_{0.5} = VC_{0.5}$ i.e, there is no difference in teeth growth in the sampled guinea pigs between OJ vs VC supplements with 0.5mg dose.   
+$H_a: OJ_{0.5} \neq VC_{0.5}$  
+
+
+```{r, echo=TRUE}
+#subset data
+ToothGrowth.0.5 <- ToothGrowth[(ToothGrowth$supp=="OJ" | ToothGrowth$supp=="VC") & ToothGrowth$dose==.5,]
+
+#t test
+t1 <- t.test(len ~ supp, paired=FALSE, var.equal=FALSE, alternative = c("two.sided"), data = ToothGrowth.0.5, conf.level = .95)
+conf.int1 <- paste(signif(t1$conf.int[1],4), signif(t1$conf.int[2],4), sep = ", ") #get confidence interval
+p.value1 <- signif(t1$p.value, 4) #get p-value
+```
+From the t-test conducted above we can see that the confindence interval is entirely above zero **[`r conf.int1`]** and the p-value less than .05 (95% confidence) **`r p.value1`** both of which provide statistical evidence to reject the $H_0$ in favor of the alternative $H_a$ hypothesis.  
+
+Hence, given the statistical evidence mentioned, we can conclude that there is a significant difference in teeth growth in guinea pigs when comparing OJ and VC supplements with 0.5mg dose. Furthermore, the OJ supplement seem to be more effective.
+
+***
+
+2.   
+$H_0: OJ_{1} = VC_{1}$ i.e, there is no difference in teeth growth in the sampled guinea pigs between OJ vs VC supplements with 1mg dose.  
+$H_a: OJ_{1} \neq VC_{1}$   
+```{r}
+ToothGrowth.1 <- ToothGrowth[(ToothGrowth$supp=="OJ" | ToothGrowth$supp=="VC") & ToothGrowth$dose==1,]
+t2 <- t.test(len ~ supp, paired=FALSE, var.equal=FALSE, data = ToothGrowth.1, conf.level = .95)
+conf.int2 <- paste(signif(t2$conf.int[1],4), signif(t2$conf.int[2],4), sep = ", ") 
+p.value2 <- signif(t2$p.value, 4)
+```
+From the t-test conducted above we can see that the confindence interval is entirely above zero **[`r conf.int2`]** and the p-value less than .05 (95% confidence) **`r p.value2`** both of which provide statistical evidence to reject the $H_0$ in favor of the alternative $H_a$ hypothesis.  
+
+Hence, given the evidence above, we can conclude that there is a significant difference in teeth growth in guinea pigs when comparing OJ and VC supplements using 1mg dose. Furthermore, the OJ supplement seem to be more effective.
+
+***
+
+3.  
+$H_0: OJ_{2} = VC_{2}$ i.e, there is no difference in teeth growth in the sampled guinea pigs between OJ vs VC supplements with 2mg dose.  
+$H_a: OJ_{2} \neq VC_{2}$ 
+```{r}
+ToothGrowth.2 <- ToothGrowth[(ToothGrowth$supp=="OJ" | ToothGrowth$supp=="VC") & ToothGrowth$dose==2,]
+t3 <- t.test(len ~ supp, paired=FALSE, var.equal=FALSE, data = ToothGrowth.2, conf.level = .95) 
+conf.int3 <- paste(signif(t3$conf.int[1],4), signif(t3$conf.int[2],4), sep = ", ") 
+p.value3 <- signif(t3$p.value, 4)
+```
+
+From the t-test conducted above we can see that the confindence interval includes zero **[`r conf.int3`]** and the p-value is (notably) greater than .05 (95% confidence) **`r p.value3`** both of which provide statistical evidence in favor of the (we fail to reject) $H_0$. 
+
+Hence, the evidence suggests that OJ and VC supplements using 2mg dose have no significant difference in teeth growth in guinea pigs.
