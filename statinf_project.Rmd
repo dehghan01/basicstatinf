@@ -102,7 +102,9 @@ x = seq(-1,1,.001)
 lines(x=x,y=dnorm(x,mean=0 ,sd=1/sqrt(n)), xlab = "Sample means", col="red", type="l", lty=2)
 ```
 
-Note, the red bell-curve is the plotted true normal $N(0, \frac{1}{sqrt{40}})$ and the black curve is the simulated data with $\bar{X}_n=`r signif(mean(m1), 1)`$ and  $\sigma=`r signif(sd(m1), 1)`$.
+Note, the red bell-curve is the plotted true normal $N(0, \frac{1}{sqrt{40}})$ and the black curve is the simulated data with $\bar{X}_n=`r signif(mean(m1), 1)`$ and  $\sigma=`r signif(var(m1), 1)`$.
+
+The simulated results are comparable to the theoretical mean: **0** and variance: $\frac{1}{sqrt(n)}=`r (1/sqrt(n))^2`$ 
 
 # Part two
 
@@ -135,7 +137,7 @@ boxplot(len~supp*dose, data = ToothGrowth, col=(c("red1","green1")), main="Tooth
   
 ***
 
-*Given the above box plot we could formulate and test at least three main hypotheses; which we can test using two-sided independent sample Student's t-tests with the customary 95 confidence interval.* 
+*Given the above box plot we could formulate and test at least three main hypotheses; which we can test using two-sided independent sample Student's t-tests with the customary 95% confidence interval.* 
 
 ***
 
